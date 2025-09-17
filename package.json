@@ -1,0 +1,14 @@
+{
+  "name": "backoffice-veiculos-api",
+  "version": "1.0.0",
+  "description": "E-commerce de Veículos - backoffice-veiculos-api",
+  "main": "index.js",
+  "scripts": {
+    "dev": "echo 'Configure dev script'",
+    "build": "echo 'Configure build script'",
+    "test": "echo 'Configure test script'"
+  },
+  "keywords": ["ecommerce", "veiculos"],
+  "author": "",
+  "license": "ISC"
+}
