@@ -13,6 +13,3 @@ coverage
 src/tests
 jest.config.js
 nodemon.json
-docker-compose.yml
-Dockerfile
-.dockerignore
