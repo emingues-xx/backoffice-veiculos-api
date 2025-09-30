@@ -36,26 +36,24 @@ Você precisa adicionar os secrets no repositório:
 
 O workflow precisa das seguintes permissões (já configuradas no arquivo):
 - ✅ **Contents:** Read (para fazer checkout do código)
-- ✅ **Issues:** Write (para comentar no PR)
-- ✅ **Pull requests:** Write (para acessar informações do PR)
 
 **Nota:** As permissões são definidas automaticamente no workflow:
 ```yaml
 permissions:
   contents: read
-  issues: write
-  pull-requests: write
-```  
+```
+
+**Importante:** O workflow não comenta no PR - a API de avaliação é responsável por isso.  
 
 ## 🚀 Como Funciona
 
 ### Fluxo de Execução:
 
-1. **Trigger:** PR é aberto/atualizado
+1. **Trigger:** PR é aberto
 2. **Checkout:** Código é baixado
 3. **Info Collection:** Coleta informações do PR
 4. **API Call:** Chama a API de avaliação
-5. **Comment:** Comenta no PR com os resultados
+5. **Log:** Registra o resultado (a API comenta no PR)
 
 ### Informações Enviadas para a API:
 
@@ -93,12 +91,14 @@ O workflow espera uma resposta da API no formato:
 
 ## 💬 Comentários Automáticos
 
-O workflow cria comentários no PR com:
+A API de avaliação é responsável por comentar no PR com:
 
 - 📋 **Resumo da avaliação**
 - 💡 **Recomendações**
 - ⚠️ **Problemas encontrados**
 - 📊 **Score geral**
+
+O workflow apenas chama a API e registra o resultado nos logs.
 
 ## 🔍 Monitoramento
 
