@@ -11,6 +11,10 @@ env:
 jobs:
   evaluate-pr:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     
     steps:
       - name: Checkout code
@@ -62,12 +66,15 @@ jobs:
           http_code=$(echo "$response" | tail -n1)
           response_body=$(echo "$response" | head -n -1)
           
+          # Sanitize response body to remove control characters
+          sanitized_response=$(echo "$response_body" | sed 's/[\x00-\x1F\x7F]//g')
+          
           echo "📊 API Response:"
           echo "  Status Code: $http_code"
-          echo "  Response: $response_body"
+          echo "  Response: $sanitized_response"
           
           # Save response for next steps
-          echo "api_response=$response_body" >> $GITHUB_OUTPUT
+          echo "api_response=$sanitized_response" >> $GITHUB_OUTPUT
           echo "api_status=$http_code" >> $GITHUB_OUTPUT
           
           # Check if API call was successful
@@ -88,7 +95,9 @@ jobs:
             const prNumber = ${{ steps.pr-info.outputs.pr_number }};
             
             try {
-              const data = JSON.parse(response);
+              // Clean the response string before parsing
+              const cleanResponse = response.replace(/[\x00-\x1F\x7F]/g, '');
+              const data = JSON.parse(cleanResponse);
               
               let comment = `## 🤖 PR Evaluation Results\n\n`;
               comment += `**PR:** #${prNumber} - ${{ steps.pr-info.outputs.pr_title }}\n`;
@@ -130,13 +139,25 @@ jobs:
               console.log('✅ Comment posted successfully');
             } catch (error) {
               console.error('❌ Error parsing API response:', error);
+              console.error('Raw response:', response);
+              console.error('Response length:', response.length);
               
-              // Fallback comment
+              // Fallback comment with raw response info
+              let fallbackComment = `## 🤖 PR Evaluation\n\n✅ PR evaluation completed successfully!\n\n**PR:** #${prNumber} - ${{ steps.pr-info.outputs.pr_title }}\n**Author:** @${{ steps.pr-info.outputs.pr_author }}\n\n`;
+              
+              // Try to extract basic info from response even if JSON parsing fails
+              if (response.includes('success') && response.includes('true')) {
+                fallbackComment += `**Status:** ✅ Success\n\n`;
+              }
+              
+              fallbackComment += `*This evaluation was performed automatically by Claude AI.*\n\n`;
+              fallbackComment += `*Note: Response parsing failed, but API call was successful.*`;
+              
               await github.rest.issues.createComment({
                 issue_number: prNumber,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `## 🤖 PR Evaluation\n\n✅ PR evaluation completed successfully!\n\n**PR:** #${prNumber} - ${{ steps.pr-info.outputs.pr_title }}\n**Author:** @${{ steps.pr-info.outputs.pr_author }}\n\n*This evaluation was performed automatically by Claude AI.*`
+                body: fallbackComment
               });
             }
       

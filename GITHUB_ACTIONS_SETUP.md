@@ -34,10 +34,18 @@ Você precisa adicionar os secrets no repositório:
 
 ### 2. Verificar Permissões
 
-O workflow precisa das seguintes permissões:
+O workflow precisa das seguintes permissões (já configuradas no arquivo):
 - ✅ **Contents:** Read (para fazer checkout do código)
 - ✅ **Issues:** Write (para comentar no PR)
-- ✅ **Pull requests:** Write (para acessar informações do PR)  
+- ✅ **Pull requests:** Write (para acessar informações do PR)
+
+**Nota:** As permissões são definidas automaticamente no workflow:
+```yaml
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+```  
 
 ## 🚀 Como Funciona
 
@@ -126,11 +134,17 @@ O workflow cria comentários no PR com:
    ```
    **Solução:** Verifique se o secret `EVALUATION_API_URL` está configurado corretamente
 
-4. **Permissões insuficientes:**
+4. **Erro de parsing JSON:**
+   ```
+   Error parsing API response: SyntaxError: Bad control character
+   ```
+   **Solução:** O workflow agora sanitiza automaticamente a resposta da API
+
+5. **Permissões insuficientes:**
    ```
    Error: Resource not accessible by integration
    ```
-   **Solução:** Verifique as permissões do workflow
+   **Solução:** As permissões são configuradas automaticamente no workflow
 
 ### Debug:
 
