@@ -1,11 +1,10 @@
-name: PR Evaluation
+name: PR Evaluation v2
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened]
 
 env:
-  # Configurável via repository secrets
   EVALUATION_API_URL: ${{ secrets.EVALUATION_API_URL || 'https://claude-webhook-production.up.railway.app/evaluate-pullrequest' }}
 
 jobs:
@@ -15,29 +14,12 @@ jobs:
       contents: read
     
     steps:
-      - name: Check for duplicate execution
-        id: check-duplicate
-        run: |
-          # Create a unique identifier for this PR and action
-          pr_id="${{ github.event.number }}"
-          action="${{ github.event.action }}"
-          run_id="${{ github.run_id }}"
-          
-          echo "PR ID: $pr_id"
-          echo "Action: $action"
-          echo "Run ID: $run_id"
-          
-          # Only proceed if this is the first run for this action
-          echo "proceed=true" >> $GITHUB_OUTPUT
-      
       - name: Checkout code
-        if: steps.check-duplicate.outputs.proceed == 'true'
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for better analysis
+          fetch-depth: 0
       
       - name: Get PR information
-        if: steps.check-duplicate.outputs.proceed == 'true'
         id: pr-info
         run: |
           echo "pr_number=${{ github.event.number }}" >> $GITHUB_OUTPUT
@@ -48,9 +30,8 @@ jobs:
           echo "base_branch=${{ github.event.pull_request.base.ref }}" >> $GITHUB_OUTPUT
       
       - name: Display PR information
-        if: steps.check-duplicate.outputs.proceed == 'true'
         run: |
-          echo "🔍 PR Information:"
+          echo "PR Information:"
           echo "  Number: ${{ steps.pr-info.outputs.pr_number }}"
           echo "  Title: ${{ steps.pr-info.outputs.pr_title }}"
           echo "  Author: ${{ steps.pr-info.outputs.pr_author }}"
@@ -59,11 +40,10 @@ jobs:
           echo "  URL: ${{ steps.pr-info.outputs.pr_url }}"
       
       - name: Call PR Evaluation API
-        if: steps.check-duplicate.outputs.proceed == 'true'
         id: evaluate
         run: |
-          echo "🚀 Calling PR Evaluation API..."
-          echo "📍 API URL: ${{ env.EVALUATION_API_URL }}"
+          echo "Calling PR Evaluation API..."
+          echo "API URL: ${{ env.EVALUATION_API_URL }}"
           
           response=$(curl -s -w "\n%{http_code}" \
             --location '${{ env.EVALUATION_API_URL }}' \
@@ -86,9 +66,9 @@ jobs:
           # Sanitize response body to remove control characters
           sanitized_response=$(echo "$response_body" | sed 's/[\x00-\x1F\x7F]//g')
           
-          echo "📊 API Response:"
+          echo "API Response:"
           echo "  Status Code: $http_code"
-          echo "  Response: $sanitized_response"
+          echo "  Response Length: ${#sanitized_response}"
           
           # Save response for next steps
           echo "api_response=$sanitized_response" >> $GITHUB_OUTPUT
@@ -96,35 +76,31 @@ jobs:
           
           # Check if API call was successful
           if [ "$http_code" -eq 200 ]; then
-            echo "✅ PR evaluation completed successfully"
+            echo "PR evaluation completed successfully"
             echo "evaluation_status=success" >> $GITHUB_OUTPUT
           else
-            echo "❌ PR evaluation failed with status code: $http_code"
+            echo "PR evaluation failed with status code: $http_code"
             echo "evaluation_status=failed" >> $GITHUB_OUTPUT
           fi
       
       - name: Log evaluation results
-        if: always() && steps.check-duplicate.outputs.proceed == 'true'
+        if: always()
         run: |
-          echo "📊 Evaluation completed!"
+          echo "Evaluation completed!"
           echo "Status: ${{ steps.evaluate.outputs.evaluation_status }}"
           
-          # Safely display API response (truncated to avoid issues)
-          api_response="${{ steps.evaluate.outputs.api_response }}"
-          echo "API Response: ${api_response:0:200}..."
-          
           if [ "${{ steps.evaluate.outputs.evaluation_status }}" = "success" ]; then
-            echo "✅ PR evaluation completed successfully"
+            echo "PR evaluation completed successfully"
             echo "The API will handle commenting on the PR automatically"
           else
-            echo "❌ PR evaluation failed"
+            echo "PR evaluation failed"
             echo "Check the API logs for more details"
           fi
       
       - name: Summary
-        if: always() && steps.check-duplicate.outputs.proceed == 'true'
+        if: always()
         run: |
-          echo "## 📊 PR Evaluation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## PR Evaluation Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **PR Number:** ${{ steps.pr-info.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
           echo "- **PR Title:** ${{ steps.pr-info.outputs.pr_title }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Author:** ${{ steps.pr-info.outputs.pr_author }}" >> $GITHUB_STEP_SUMMARY
