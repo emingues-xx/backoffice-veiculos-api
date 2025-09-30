@@ -37,7 +37,7 @@ Você precisa adicionar os secrets no repositório:
 O workflow precisa das seguintes permissões:
 - ✅ **Contents:** Read (para fazer checkout do código)
 - ✅ **Issues:** Write (para comentar no PR)
-- ✅ **Pull requests:** Write (para acessar informações do PR)
+- ✅ **Pull requests:** Write (para acessar informações do PR)  
 
 ## 🚀 Como Funciona
 
