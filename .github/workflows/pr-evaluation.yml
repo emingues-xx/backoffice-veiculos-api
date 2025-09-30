@@ -1,22 +1,23 @@
-name: PR Evaluation
+name: PR Evaluation v2
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened]
 
 env:
-  # Configurável via repository secrets
   EVALUATION_API_URL: ${{ secrets.EVALUATION_API_URL || 'https://claude-webhook-production.up.railway.app/evaluate-pullrequest' }}
 
 jobs:
   evaluate-pr:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for better analysis
+          fetch-depth: 0
       
       - name: Get PR information
         id: pr-info
@@ -30,7 +31,7 @@ jobs:
       
       - name: Display PR information
         run: |
-          echo "🔍 PR Information:"
+          echo "PR Information:"
           echo "  Number: ${{ steps.pr-info.outputs.pr_number }}"
           echo "  Title: ${{ steps.pr-info.outputs.pr_title }}"
           echo "  Author: ${{ steps.pr-info.outputs.pr_author }}"
@@ -41,8 +42,8 @@ jobs:
       - name: Call PR Evaluation API
         id: evaluate
         run: |
-          echo "🚀 Calling PR Evaluation API..."
-          echo "📍 API URL: ${{ env.EVALUATION_API_URL }}"
+          echo "Calling PR Evaluation API..."
+          echo "API URL: ${{ env.EVALUATION_API_URL }}"
           
           response=$(curl -s -w "\n%{http_code}" \
             --location '${{ env.EVALUATION_API_URL }}' \
@@ -62,102 +63,44 @@ jobs:
           http_code=$(echo "$response" | tail -n1)
           response_body=$(echo "$response" | head -n -1)
           
-          echo "📊 API Response:"
+          # Sanitize response body to remove control characters
+          sanitized_response=$(echo "$response_body" | sed 's/[\x00-\x1F\x7F]//g')
+          
+          echo "API Response:"
           echo "  Status Code: $http_code"
-          echo "  Response: $response_body"
+          echo "  Response Length: ${#sanitized_response}"
           
           # Save response for next steps
-          echo "api_response=$response_body" >> $GITHUB_OUTPUT
+          echo "api_response=$sanitized_response" >> $GITHUB_OUTPUT
           echo "api_status=$http_code" >> $GITHUB_OUTPUT
           
           # Check if API call was successful
           if [ "$http_code" -eq 200 ]; then
-            echo "✅ PR evaluation completed successfully"
+            echo "PR evaluation completed successfully"
             echo "evaluation_status=success" >> $GITHUB_OUTPUT
           else
-            echo "❌ PR evaluation failed with status code: $http_code"
+            echo "PR evaluation failed with status code: $http_code"
             echo "evaluation_status=failed" >> $GITHUB_OUTPUT
           fi
       
-      - name: Comment on PR with evaluation results
-        if: always() && steps.evaluate.outputs.evaluation_status == 'success'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const response = `${{ steps.evaluate.outputs.api_response }}`;
-            const prNumber = ${{ steps.pr-info.outputs.pr_number }};
-            
-            try {
-              const data = JSON.parse(response);
-              
-              let comment = `## 🤖 PR Evaluation Results\n\n`;
-              comment += `**PR:** #${prNumber} - ${{ steps.pr-info.outputs.pr_title }}\n`;
-              comment += `**Author:** @${{ steps.pr-info.outputs.pr_author }}\n`;
-              comment += `**Branch:** \`${{ steps.pr-info.outputs.pr_branch }}\` → \`${{ steps.pr-info.outputs.base_branch }}\`\n\n`;
-              
-              if (data.evaluation) {
-                comment += `### 📋 Evaluation Summary\n`;
-                comment += `- **Overall Score:** ${data.evaluation.score || 'N/A'}/10\n`;
-                comment += `- **Status:** ${data.evaluation.status || 'N/A'}\n\n`;
-                
-                if (data.evaluation.recommendations) {
-                  comment += `### 💡 Recommendations\n`;
-                  data.evaluation.recommendations.forEach((rec, index) => {
-                    comment += `${index + 1}. ${rec}\n`;
-                  });
-                  comment += `\n`;
-                }
-                
-                if (data.evaluation.issues) {
-                  comment += `### ⚠️ Issues Found\n`;
-                  data.evaluation.issues.forEach((issue, index) => {
-                    comment += `${index + 1}. ${issue}\n`;
-                  });
-                  comment += `\n`;
-                }
-              }
-              
-              comment += `---\n`;
-              comment += `*This evaluation was performed automatically by Claude AI.*`;
-              
-              await github.rest.issues.createComment({
-                issue_number: prNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-              
-              console.log('✅ Comment posted successfully');
-            } catch (error) {
-              console.error('❌ Error parsing API response:', error);
-              
-              // Fallback comment
-              await github.rest.issues.createComment({
-                issue_number: prNumber,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: `## 🤖 PR Evaluation\n\n✅ PR evaluation completed successfully!\n\n**PR:** #${prNumber} - ${{ steps.pr-info.outputs.pr_title }}\n**Author:** @${{ steps.pr-info.outputs.pr_author }}\n\n*This evaluation was performed automatically by Claude AI.*`
-              });
-            }
-      
-      - name: Handle evaluation failure
-        if: always() && steps.evaluate.outputs.evaluation_status == 'failed'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const prNumber = ${{ steps.pr-info.outputs.pr_number }};
-            
-            await github.rest.issues.createComment({
-              issue_number: prNumber,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `## 🤖 PR Evaluation\n\n❌ PR evaluation failed to complete.\n\n**PR:** #${prNumber} - ${{ steps.pr-info.outputs.pr_title }}\n**Author:** @${{ steps.pr-info.outputs.pr_author }}\n\n**Error:** API returned status code ${{ steps.evaluate.outputs.api_status }}\n\n*Please try again or contact the development team.*`
-            });
+      - name: Log evaluation results
+        if: always()
+        run: |
+          echo "Evaluation completed!"
+          echo "Status: ${{ steps.evaluate.outputs.evaluation_status }}"
+          
+          if [ "${{ steps.evaluate.outputs.evaluation_status }}" = "success" ]; then
+            echo "PR evaluation completed successfully"
+            echo "The API will handle commenting on the PR automatically"
+          else
+            echo "PR evaluation failed"
+            echo "Check the API logs for more details"
+          fi
       
       - name: Summary
         if: always()
         run: |
-          echo "## 📊 PR Evaluation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## PR Evaluation Summary" >> $GITHUB_STEP_SUMMARY
           echo "- **PR Number:** ${{ steps.pr-info.outputs.pr_number }}" >> $GITHUB_STEP_SUMMARY
           echo "- **PR Title:** ${{ steps.pr-info.outputs.pr_title }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Author:** ${{ steps.pr-info.outputs.pr_author }}" >> $GITHUB_STEP_SUMMARY
