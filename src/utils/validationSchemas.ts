@@ -121,7 +121,7 @@ export const createSaleSchema = Joi.object({
     name: Joi.string().min(2).max(50).required(),
     email: Joi.string().email().required(),
     phone: Joi.string().pattern(/^\(\d{2}\)\s\d{4,5}-\d{4}$/).required(),
-    document: Joi.string().pattern(/^\d{3}\.\d{3}\.\d{3}-\d{2}$/).required()
+    document: Joi.string().pattern(/^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$/).required()
   }).required(),
   salePrice: Joi.number().min(0).required(),
   paymentMethod: Joi.string().valid('cash', 'financing', 'trade-in').required(),
