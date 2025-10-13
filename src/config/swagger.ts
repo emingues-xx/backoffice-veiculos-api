@@ -21,10 +21,18 @@ const swaggerOptions = {
         Esta API utiliza JWT (JSON Web Tokens) para autenticação. 
         Inclua o token no header: \`Authorization: Bearer <token>\`
         
+        **Importante**: O token JWT expira em **4 horas**. Após a expiração, 
+        será necessário fazer login novamente para obter um novo token.
+        
         ## Roles de Usuário
         - **admin**: Acesso total ao sistema
         - **manager**: Gestão de veículos e vendas
         - **seller**: Criação e gestão de seus próprios veículos
+        
+        ## Validação de Dados
+        - **IDs**: Todos os IDs devem ser ObjectIds válidos do MongoDB (24 caracteres hexadecimais)
+        - **Campos obrigatórios**: Verifique a documentação de cada endpoint para campos obrigatórios
+        - **Formato de dados**: Todos os dados devem estar em formato JSON válido
       `,
       contact: {
         name: 'Squad Backoffice',
@@ -51,7 +59,7 @@ const swaggerOptions = {
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'JWT token obtido através do endpoint de login'
+          description: 'JWT token obtido através do endpoint de login. Token expira em 4 horas.'
         }
       },
       schemas: {
@@ -785,7 +793,7 @@ const swaggerOptions = {
               properties: {
                 token: {
                   type: 'string',
-                  description: 'JWT token para autenticação',
+                  description: 'JWT token para autenticação (expira em 4 horas)',
                   example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
                 },
                 user: {
