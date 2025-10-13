@@ -63,7 +63,7 @@ try {
             buyer = @{
                 name = "João Silva"
                 email = "joao.silva@email.com"
-                phone = "(11) 9999-9999"
+                phone = "11999999999"
                 document = "12345678900"
             }
             salePrice = 50000
