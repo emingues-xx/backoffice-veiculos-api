@@ -2,6 +2,9 @@ import Joi from 'joi';
 
 // Common validation schemas
 export const mongoIdSchema = Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required();
+export const mongoIdParamSchema = Joi.object({
+  id: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required()
+});
 
 export const paginationSchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
