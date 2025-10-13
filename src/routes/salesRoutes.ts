@@ -14,7 +14,7 @@ import {
   createSaleSchema,
   updateSaleSchema,
   salesFiltersSchema,
-  mongoIdSchema
+  mongoIdParamSchema
 } from '@/utils/validationSchemas';
 
 const router = Router();
@@ -27,10 +27,10 @@ router.post('/', authorize('admin', 'manager', 'seller'), validate(createSaleSch
 router.get('/', validateQuery(salesFiltersSchema), getSales);
 router.get('/stats', getSalesStats);
 router.get('/my-sales', getSellerSales);
-router.get('/:id', validateParams(mongoIdSchema), getSaleById);
-router.put('/:id', validateParams(mongoIdSchema), validate(updateSaleSchema), updateSale);
+router.get('/:id', validateParams(mongoIdParamSchema), getSaleById);
+router.put('/:id', validateParams(mongoIdParamSchema), validate(updateSaleSchema), updateSale);
 
 // Admin only routes
-router.delete('/:id', authorize('admin'), validateParams(mongoIdSchema), deleteSale);
+router.delete('/:id', authorize('admin'), validateParams(mongoIdParamSchema), deleteSale);
 
 export default router;
