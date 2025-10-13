@@ -5,54 +5,15 @@ import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
-import swaggerJsdoc from 'swagger-jsdoc';
 
 import { config } from '@/config/config';
+import { swaggerSpec } from '@/config/swagger';
 import { errorHandler, notFound } from '@/middleware/errorHandler';
 
 // Import routes
 import vehicleRoutes from '@/routes/vehicleRoutes';
 import userRoutes from '@/routes/userRoutes';
 import salesRoutes from '@/routes/salesRoutes';
-
-// Swagger configuration
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Backoffice Veículos API',
-      version: '1.0.0',
-      description: 'API para gestão de anúncios e vendas de veículos',
-      contact: {
-        name: 'Squad Backoffice',
-        email: 'backoffice@ecommerce-veiculos.com'
-      }
-    },
-    servers: [
-      {
-        url: `http://localhost:${config.port}${config.apiPrefix}`,
-        description: 'Development server'
-      }
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT'
-        }
-      }
-    },
-    security: [
-      {
-        bearerAuth: []
-      }
-    ]
-  },
-  apis: ['./src/routes/*.ts', './src/controllers/*.ts']
-};
-
-const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 const app = express();
 
