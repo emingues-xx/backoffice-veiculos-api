@@ -14,7 +14,8 @@ import {
   createVehicleSchema,
   updateVehicleSchema,
   vehicleFiltersSchema,
-  mongoIdSchema
+  mongoIdSchema,
+  mongoIdParamSchema
 } from '@/utils/validationSchemas';
 
 const router = Router();
@@ -294,7 +295,7 @@ router.get('/stats', getVehicleStats);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/:id', validateParams(mongoIdSchema), getVehicleById);
+router.get('/:id', validateParams(mongoIdParamSchema), getVehicleById);
 
 // Protected routes
 router.use(authenticate);
@@ -489,7 +490,7 @@ router.post('/', authorize('admin', 'manager', 'seller'), validate(createVehicle
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.put('/:id', validateParams(mongoIdSchema), validate(updateVehicleSchema), updateVehicle);
+router.put('/:id', validateParams(mongoIdParamSchema), validate(updateVehicleSchema), updateVehicle);
 
 /**
  * @swagger
@@ -542,7 +543,7 @@ router.put('/:id', validateParams(mongoIdSchema), validate(updateVehicleSchema),
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete('/:id', validateParams(mongoIdSchema), deleteVehicle);
+router.delete('/:id', validateParams(mongoIdParamSchema), deleteVehicle);
 
 /**
  * @swagger
@@ -603,6 +604,6 @@ router.delete('/:id', validateParams(mongoIdSchema), deleteVehicle);
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.patch('/:id/featured', authorize('admin'), validateParams(mongoIdSchema), toggleFeatured);
+router.patch('/:id/featured', authorize('admin'), validateParams(mongoIdParamSchema), toggleFeatured);
 
 export default router;
