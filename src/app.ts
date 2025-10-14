@@ -72,7 +72,11 @@ if (config.isDevelopment) {
 // API Documentation
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Backoffice Veículos API Documentation'
+  customSiteTitle: 'Backoffice Veículos API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true
+  }
 }));
 
 // Health check endpoint
