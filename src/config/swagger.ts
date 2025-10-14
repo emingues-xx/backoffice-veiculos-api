@@ -74,7 +74,7 @@ const swaggerOptions = {
           properties: {
             _id: {
               type: 'string',
-              description: 'ID único do veículo',
+              description: 'ID unico do veiculo',
               example: '68ed5b50572e134dd39350e4'
             },
             brand: {
@@ -153,7 +153,7 @@ const swaggerOptions = {
               description: 'Descrição detalhada do veículo',
               minLength: 10,
               maxLength: 2000,
-              example: 'Veículo em excelente estado, único dono, revisões em dia.'
+              example: 'Veiculo em excelente estado, unico dono, revisoes em dia.'
             },
             images: {
               type: 'array',
@@ -351,7 +351,7 @@ const swaggerOptions = {
               description: 'Descrição detalhada do veículo',
               minLength: 10,
               maxLength: 2000,
-              example: 'Veículo em excelente estado, único dono, revisões em dia.'
+              example: 'Veiculo em excelente estado, unico dono, revisoes em dia.'
             },
             images: {
               type: 'array',
@@ -431,6 +431,13 @@ const swaggerOptions = {
                   example: 'vendas@toyota.com'
                 }
               }
+            },
+            status: {
+              type: 'string',
+              description: 'Status do veículo',
+              enum: ['active', 'sold', 'inactive', 'pending'],
+              default: 'active',
+              example: 'active'
             },
             isFeatured: {
               type: 'boolean',
@@ -519,7 +526,7 @@ const swaggerOptions = {
               description: 'Descrição detalhada do veículo',
               minLength: 10,
               maxLength: 2000,
-              example: 'Veículo em excelente estado, único dono, revisões em dia.'
+              example: 'Veiculo em excelente estado, unico dono, revisoes em dia.'
             },
             images: {
               type: 'array',
@@ -725,7 +732,7 @@ const swaggerOptions = {
           properties: {
             _id: {
               type: 'string',
-              description: 'ID único do usuário',
+              description: 'ID unico do usuario',
               example: '68ed57a3572e134dd39350ce'
             },
             email: {
@@ -926,6 +933,251 @@ const swaggerOptions = {
                   }
                 }
               }
+            }
+          }
+        },
+        // Sales Schemas
+        Sale: {
+          type: 'object',
+          properties: {
+            _id: {
+              type: 'string',
+              description: 'ID único da venda',
+              example: '68ee4b984740ba79c6d9df9c'
+            },
+            vehicleId: {
+              type: 'string',
+              description: 'ID do veículo vendido',
+              example: '68ed79c17fb1e4518e0098b6'
+            },
+            vehicle: {
+              type: 'object',
+              description: 'Informações do veículo (snapshot)',
+              properties: {
+                brand: {
+                  type: 'string',
+                  example: 'Audi'
+                },
+                vehicleModel: {
+                  type: 'string',
+                  example: 'A4'
+                },
+                year: {
+                  type: 'integer',
+                  example: 2023
+                },
+                price: {
+                  type: 'number',
+                  example: 120000
+                }
+              }
+            },
+            buyer: {
+              type: 'object',
+              description: 'Informações do comprador',
+              properties: {
+                name: {
+                  type: 'string',
+                  example: 'Joao Silva'
+                },
+                email: {
+                  type: 'string',
+                  format: 'email',
+                  example: 'joao@email.com'
+                },
+                phone: {
+                  type: 'string',
+                  example: '11999999999'
+                },
+                document: {
+                  type: 'string',
+                  example: '12345678900'
+                }
+              }
+            },
+            seller: {
+              type: 'object',
+              description: 'Informações do vendedor',
+              properties: {
+                id: {
+                  type: 'string',
+                  example: '68ed57a3572e134dd39350ce'
+                },
+                name: {
+                  type: 'string',
+                  example: 'Administrador'
+                },
+                email: {
+                  type: 'string',
+                  format: 'email',
+                  example: 'admin@backoffice.com'
+                }
+              }
+            },
+            salePrice: {
+              type: 'number',
+              description: 'Preço de venda',
+              example: 50000
+            },
+            commission: {
+              type: 'number',
+              description: 'Comissão da venda (5% do preço de venda)',
+              example: 2500
+            },
+            status: {
+              type: 'string',
+              enum: ['pending', 'completed', 'cancelled'],
+              description: 'Status da venda',
+              example: 'pending'
+            },
+            paymentMethod: {
+              type: 'string',
+              enum: ['cash', 'financing', 'trade-in'],
+              description: 'Método de pagamento',
+              example: 'cash'
+            },
+            notes: {
+              type: 'string',
+              description: 'Observações adicionais',
+              example: 'Venda finalizada com sucesso'
+            },
+            saleDate: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Data da venda',
+              example: '2025-10-14T13:09:44.487Z'
+            },
+            createdAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Data de criação',
+              example: '2025-10-14T13:09:44.492Z'
+            },
+            updatedAt: {
+              type: 'string',
+              format: 'date-time',
+              description: 'Data de atualização',
+              example: '2025-10-14T13:12:25.208Z'
+            }
+          }
+        },
+        CreateSaleRequest: {
+          type: 'object',
+          required: ['vehicleId', 'buyer', 'salePrice', 'paymentMethod'],
+          properties: {
+            vehicleId: {
+              type: 'string',
+              description: 'ID do veículo a ser vendido',
+              example: '68ed79c17fb1e4518e0098b6'
+            },
+            buyer: {
+              type: 'object',
+              required: ['name', 'email', 'phone', 'document'],
+              properties: {
+                name: {
+                  type: 'string',
+                  description: 'Nome completo do comprador',
+                  example: 'Joao Silva'
+                },
+                email: {
+                  type: 'string',
+                  format: 'email',
+                  description: 'Email do comprador',
+                  example: 'joao@email.com'
+                },
+                phone: {
+                  type: 'string',
+                  description: 'Telefone do comprador',
+                  example: '11999999999'
+                },
+                document: {
+                  type: 'string',
+                  description: 'CPF/CNPJ do comprador',
+                  example: '12345678900'
+                }
+              }
+            },
+            salePrice: {
+              type: 'number',
+              minimum: 0,
+              description: 'Preço de venda',
+              example: 50000
+            },
+            commission: {
+              type: 'number',
+              minimum: 0,
+              description: 'Comissão (opcional - será calculada automaticamente se não informada)',
+              example: 2500
+            },
+            paymentMethod: {
+              type: 'string',
+              enum: ['cash', 'financing', 'trade-in'],
+              description: 'Método de pagamento',
+              example: 'cash'
+            },
+            notes: {
+              type: 'string',
+              maxLength: 1000,
+              description: 'Observações adicionais',
+              example: 'Cliente interessado em financiamento'
+            }
+          }
+        },
+        UpdateSaleRequest: {
+          type: 'object',
+          properties: {
+            status: {
+              type: 'string',
+              enum: ['pending', 'completed', 'cancelled'],
+              description: 'Novo status da venda',
+              example: 'completed'
+            },
+            salePrice: {
+              type: 'number',
+              minimum: 0,
+              description: 'Novo preço de venda',
+              example: 55000
+            },
+            notes: {
+              type: 'string',
+              maxLength: 1000,
+              description: 'Observações adicionais',
+              example: 'Venda finalizada com sucesso'
+            }
+          }
+        },
+        SalesStats: {
+          type: 'object',
+          properties: {
+            totalSales: {
+              type: 'integer',
+              description: 'Total de vendas',
+              example: 25
+            },
+            completedSales: {
+              type: 'integer',
+              description: 'Vendas completadas',
+              example: 20
+            },
+            pendingSales: {
+              type: 'integer',
+              description: 'Vendas pendentes',
+              example: 3
+            },
+            cancelledSales: {
+              type: 'integer',
+              description: 'Vendas canceladas',
+              example: 2
+            },
+            totalRevenue: {
+              type: 'number',
+              description: 'Receita total',
+              example: 1250000
+            },
+            averageSalePrice: {
+              type: 'number',
+              description: 'Preço médio de venda',
+              example: 50000
             }
           }
         }

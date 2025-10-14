@@ -148,7 +148,7 @@ SaleSchema.virtual('profitMargin').get(function() {
 
 // Pre-save middleware to calculate commission
 SaleSchema.pre('save', function(next) {
-  if (this.isModified('salePrice') && !this.commission) {
+  if (this.isModified('salePrice') && (this.commission === undefined || this.commission === null || this.commission === 0)) {
     // Commission is 5% of sale price
     this.commission = this.salePrice * 0.05;
   }

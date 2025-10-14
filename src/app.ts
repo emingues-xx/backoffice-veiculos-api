@@ -17,6 +17,25 @@ import salesRoutes from '@/routes/salesRoutes';
 
 const app = express();
 
+// Configure encoding
+app.use(express.json({ 
+  limit: '10mb',
+  type: 'application/json'
+}));
+app.use(express.urlencoded({ 
+  extended: true, 
+  limit: '10mb',
+  type: 'application/x-www-form-urlencoded'
+}));
+
+// Set charset for responses
+app.use((req, res, next) => {
+  res.charset = 'utf-8';
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  next();
+});
+
+
 // Security middleware
 app.use(helmet());
 app.use(cors({

@@ -60,6 +60,7 @@ export const createVehicleSchema = Joi.object({
     phone: Joi.string().pattern(/^\(\d{2}\)\s\d{4,5}-\d{4}$/).required(),
     email: Joi.string().email().required()
   }).required(),
+  status: Joi.string().valid('active', 'sold', 'inactive', 'pending').default('active'),
   isFeatured: Joi.boolean().default(false)
 });
 
@@ -116,16 +117,17 @@ export const vehicleFiltersSchema = Joi.object({
 
 // Sale validation schemas
 export const createSaleSchema = Joi.object({
-  vehicleId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).required(),
+  vehicleId: Joi.string().required(),
   buyer: Joi.object({
-    name: Joi.string().min(2).max(50).required(),
+    name: Joi.string().required(),
     email: Joi.string().email().required(),
-    phone: Joi.string().pattern(/^\(\d{2}\)\s\d{4,5}-\d{4}$|^\d{10,11}$/).required(),
-    document: Joi.string().pattern(/^\d{3}\.\d{3}\.\d{3}-\d{2}$|^\d{11}$/).required()
+    phone: Joi.string().required(),
+    document: Joi.string().required()
   }).required(),
   salePrice: Joi.number().min(0).required(),
+  commission: Joi.number().min(0).optional(),
   paymentMethod: Joi.string().valid('cash', 'financing', 'trade-in').required(),
-  notes: Joi.string().max(1000)
+  notes: Joi.string().optional()
 });
 
 export const updateSaleSchema = Joi.object({

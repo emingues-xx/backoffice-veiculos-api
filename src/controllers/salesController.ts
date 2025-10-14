@@ -1,17 +1,22 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import Sale from '@/models/Sale';
 import Vehicle from '@/models/Vehicle';
 import User from '@/models/User';
 import { AuthRequest } from '@/middleware/auth';
 import { asyncHandler, createError } from '@/middleware/errorHandler';
-import { ApiResponse, PaginationQuery } from '@/types/api.types';
-import { SalesFilters } from '@/types/sales.types';
+import { ApiResponse } from '@/types/api.types';
 
 export const createSale = asyncHandler(async (req: AuthRequest, res: Response<ApiResponse>) => {
-  const { vehicleId, buyer, salePrice, paymentMethod, notes } = req.body;
+  console.log('=== CREATE SALE ===');
+  console.log('Body:', req.body);
+  console.log('User:', req.user);
+  
+  const { vehicleId, buyer, salePrice, paymentMethod, notes, commission } = req.body;
 
   // Verify vehicle exists and is available
+  console.log('Looking for vehicle:', vehicleId);
   const vehicle = await Vehicle.findById(vehicleId);
+  console.log('Vehicle found:', vehicle);
   if (!vehicle) {
     throw createError('Vehicle not found', 404);
   }
@@ -21,12 +26,15 @@ export const createSale = asyncHandler(async (req: AuthRequest, res: Response<Ap
   }
 
   // Get seller information
+  console.log('Looking for seller:', req.user?.id);
   const seller = await User.findById(req.user?.id);
+  console.log('Seller found:', seller);
   if (!seller) {
     throw createError('Seller not found', 404);
   }
 
   // Create sale record
+  console.log('Creating sale object...');
   const sale = new Sale({
     vehicleId,
     vehicle: {
@@ -42,11 +50,20 @@ export const createSale = asyncHandler(async (req: AuthRequest, res: Response<Ap
       email: seller.email
     },
     salePrice,
+    commission: 0, // Will be calculated by the pre-save middleware
     paymentMethod,
     notes
   });
 
-  await sale.save();
+  console.log('Sale object created:', sale);
+  console.log('Saving sale...');
+  try {
+    await sale.save();
+    console.log('Sale saved successfully!');
+  } catch (error) {
+    console.error('Error saving sale:', error);
+    throw error;
+  }
 
   // Update vehicle status to sold
   vehicle.status = 'sold';
@@ -59,57 +76,68 @@ export const createSale = asyncHandler(async (req: AuthRequest, res: Response<Ap
   });
 });
 
-export const getSales = asyncHandler(async (req: Request, res: Response<ApiResponse>) => {
+export const getSales = asyncHandler(async (req: AuthRequest, res: Response<ApiResponse>) => {
   const {
+    sellerId,
+    status,
+    paymentMethod,
+    dateFrom,
+    dateTo,
     page = 1,
     limit = 10,
     sortBy = 'saleDate',
-    sortOrder = 'desc',
-    ...filters
-  } = req.query as SalesFilters & PaginationQuery;
+    sortOrder = 'desc'
+  } = req.query;
 
-  const query: any = {};
-
-  // Apply filters
-  if (filters.sellerId) query['seller.id'] = filters.sellerId;
-  if (filters.status) query.status = filters.status;
-  if (filters.paymentMethod) query.paymentMethod = filters.paymentMethod;
-  if (filters.dateFrom || filters.dateTo) {
-    query.saleDate = {};
-    if (filters.dateFrom) query.saleDate.$gte = new Date(filters.dateFrom);
-    if (filters.dateTo) query.saleDate.$lte = new Date(filters.dateTo);
+  // Build filter object
+  const filter: any = {};
+  
+  if (sellerId) filter['seller.id'] = sellerId;
+  if (status) filter.status = status;
+  if (paymentMethod) filter.paymentMethod = paymentMethod;
+  
+  if (dateFrom || dateTo) {
+    filter.saleDate = {};
+    if (dateFrom) filter.saleDate.$gte = new Date(dateFrom as string);
+    if (dateTo) filter.saleDate.$lte = new Date(dateTo as string);
   }
 
-  const sort: any = {};
-  sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-
+  // Calculate pagination
   const skip = (Number(page) - 1) * Number(limit);
 
+  // Build sort object
+  const sort: any = {};
+  sort[sortBy as string] = sortOrder === 'desc' ? -1 : 1;
+
+  // Execute query
   const [sales, total] = await Promise.all([
-    Sale.find(query)
+    Sale.find(filter)
       .sort(sort)
       .skip(skip)
       .limit(Number(limit))
-      .lean(),
-    Sale.countDocuments(query)
+      .populate('vehicleId', 'brand vehicleModel year price images'),
+    Sale.countDocuments(filter)
   ]);
-
-  const totalPages = Math.ceil(total / Number(limit));
 
   res.json({
     success: true,
-    data: sales,
-    pagination: {
-      page: Number(page),
-      limit: Number(limit),
-      total,
-      totalPages
-    }
+    data: {
+      sales,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    },
+    message: 'Sales retrieved successfully'
   });
 });
 
-export const getSaleById = asyncHandler(async (req: Request, res: Response<ApiResponse>) => {
-  const sale = await Sale.findById(req.params.id);
+export const getSaleById = asyncHandler(async (req: AuthRequest, res: Response<ApiResponse>) => {
+  const { id } = req.params;
+
+  const sale = await Sale.findById(id).populate('vehicleId', 'brand vehicleModel year price images');
   
   if (!sale) {
     throw createError('Sale not found', 404);
@@ -117,53 +145,53 @@ export const getSaleById = asyncHandler(async (req: Request, res: Response<ApiRe
 
   res.json({
     success: true,
-    data: sale
+    data: sale,
+    message: 'Sale retrieved successfully'
   });
 });
 
 export const updateSale = asyncHandler(async (req: AuthRequest, res: Response<ApiResponse>) => {
-  const sale = await Sale.findById(req.params.id);
-  
+  const { id } = req.params;
+  const { status, salePrice, notes } = req.body;
+
+  const sale = await Sale.findById(id);
   if (!sale) {
     throw createError('Sale not found', 404);
   }
 
   // Check if user has permission to update this sale
   if (req.user?.role !== 'admin' && sale.seller.id !== req.user?.id) {
-    throw createError('Not authorized to update this sale', 403);
+    throw createError('Unauthorized to update this sale', 403);
   }
 
-  const updatedSale = await Sale.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    { new: true, runValidators: true }
-  );
+  // Update fields
+  if (status !== undefined) sale.status = status;
+  if (salePrice !== undefined) sale.salePrice = salePrice;
+  if (notes !== undefined) sale.notes = notes;
+
+  await sale.save();
 
   res.json({
     success: true,
-    data: updatedSale,
+    data: sale,
     message: 'Sale updated successfully'
   });
 });
 
 export const deleteSale = asyncHandler(async (req: AuthRequest, res: Response<ApiResponse>) => {
-  const sale = await Sale.findById(req.params.id);
-  
+  const { id } = req.params;
+
+  const sale = await Sale.findById(id);
   if (!sale) {
     throw createError('Sale not found', 404);
   }
 
-  // Only admins can delete sales
-  if (req.user?.role !== 'admin') {
-    throw createError('Not authorized to delete sales', 403);
-  }
-
-  // If sale is completed, update vehicle status back to active
+  // If sale is completed, also update vehicle status back to active
   if (sale.status === 'completed') {
     await Vehicle.findByIdAndUpdate(sale.vehicleId, { status: 'active' });
   }
 
-  await Sale.findByIdAndDelete(req.params.id);
+  await Sale.findByIdAndDelete(id);
 
   res.json({
     success: true,
@@ -171,127 +199,88 @@ export const deleteSale = asyncHandler(async (req: AuthRequest, res: Response<Ap
   });
 });
 
-export const getSalesStats = asyncHandler(async (req: Request, res: Response<ApiResponse>) => {
+export const getSalesStats = asyncHandler(async (req: AuthRequest, res: Response<ApiResponse>) => {
+  const { sellerId, dateFrom, dateTo } = req.query;
+
+  // Build filter object
+  const filter: any = {};
+  if (sellerId) filter['seller.id'] = sellerId;
+  
+  if (dateFrom || dateTo) {
+    filter.saleDate = {};
+    if (dateFrom) filter.saleDate.$gte = new Date(dateFrom as string);
+    if (dateTo) filter.saleDate.$lte = new Date(dateTo as string);
+  }
+
+  // Get statistics
   const [
     totalSales,
+    completedSales,
+    pendingSales,
+    cancelledSales,
     totalRevenue,
-    totalCommission,
-    averageSalePrice,
-    salesByMonth,
-    topSellers,
-    salesByPaymentMethod
+    averageSalePrice
   ] = await Promise.all([
-    Sale.countDocuments({ status: 'completed' }),
+    Sale.countDocuments(filter),
+    Sale.countDocuments({ ...filter, status: 'completed' }),
+    Sale.countDocuments({ ...filter, status: 'pending' }),
+    Sale.countDocuments({ ...filter, status: 'cancelled' }),
     Sale.aggregate([
-      { $match: { status: 'completed' } },
+      { $match: { ...filter, status: 'completed' } },
       { $group: { _id: null, total: { $sum: '$salePrice' } } }
     ]),
     Sale.aggregate([
-      { $match: { status: 'completed' } },
-      { $group: { _id: null, total: { $sum: '$commission' } } }
-    ]),
-    Sale.aggregate([
-      { $match: { status: 'completed' } },
+      { $match: { ...filter, status: 'completed' } },
       { $group: { _id: null, average: { $avg: '$salePrice' } } }
-    ]),
-    Sale.aggregate([
-      { $match: { status: 'completed' } },
-      {
-        $group: {
-          _id: {
-            year: { $year: '$saleDate' },
-            month: { $month: '$saleDate' }
-          },
-          sales: { $sum: 1 },
-          revenue: { $sum: '$salePrice' }
-        }
-      },
-      { $sort: { '_id.year': -1, '_id.month': -1 } },
-      { $limit: 12 }
-    ]),
-    Sale.aggregate([
-      { $match: { status: 'completed' } },
-      {
-        $group: {
-          _id: '$seller.id',
-          sellerName: { $first: '$seller.name' },
-          sales: { $sum: 1 },
-          revenue: { $sum: '$salePrice' }
-        }
-      },
-      { $sort: { sales: -1 } },
-      { $limit: 10 }
-    ]),
-    Sale.aggregate([
-      { $match: { status: 'completed' } },
-      {
-        $group: {
-          _id: '$paymentMethod',
-          count: { $sum: 1 },
-          revenue: { $sum: '$salePrice' }
-        }
-      }
     ])
   ]);
 
   const stats = {
     totalSales,
+    completedSales,
+    pendingSales,
+    cancelledSales,
     totalRevenue: totalRevenue[0]?.total || 0,
-    totalCommission: totalCommission[0]?.total || 0,
-    averageSalePrice: Math.round(averageSalePrice[0]?.average || 0),
-    salesByMonth: salesByMonth.map(item => ({
-      month: `${item._id.year}-${item._id.month.toString().padStart(2, '0')}`,
-      sales: item.sales,
-      revenue: item.revenue
-    })),
-    topSellers: topSellers.map(item => ({
-      sellerId: item._id,
-      sellerName: item.sellerName,
-      sales: item.sales,
-      revenue: item.revenue
-    })),
-    salesByPaymentMethod: salesByPaymentMethod.map(item => ({
-      method: item._id,
-      count: item.count,
-      revenue: item.revenue
-    }))
+    averageSalePrice: averageSalePrice[0]?.average || 0
   };
 
   res.json({
     success: true,
-    data: stats
+    data: stats,
+    message: 'Sales statistics retrieved successfully'
   });
 });
 
 export const getSellerSales = asyncHandler(async (req: AuthRequest, res: Response<ApiResponse>) => {
-  const { page = 1, limit = 10, sortBy = 'saleDate', sortOrder = 'desc' } = req.query as PaginationQuery;
+  const { page = 1, limit = 10 } = req.query;
+  const sellerId = req.user?.id;
 
-  const query = { 'seller.id': req.user?.id };
-
-  const sort: any = {};
-  sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+  if (!sellerId) {
+    throw createError('User not authenticated', 401);
+  }
 
   const skip = (Number(page) - 1) * Number(limit);
 
   const [sales, total] = await Promise.all([
-    Sale.find(query)
-      .sort(sort)
+    Sale.find({ 'seller.id': sellerId })
+      .sort({ saleDate: -1 })
       .skip(skip)
       .limit(Number(limit))
-      .lean(),
-    Sale.countDocuments(query)
+      .populate('vehicleId', 'brand vehicleModel year price images'),
+    Sale.countDocuments({ 'seller.id': sellerId })
   ]);
-
-  const totalPages = Math.ceil(total / Number(limit));
 
   res.json({
     success: true,
-    data: sales,
-    pagination: {
-      page: Number(page),
-      limit: Number(limit),
-      total,
-      totalPages
-    }
+    data: {
+      sales,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    },
+    message: 'Seller sales retrieved successfully'
   });
 });
