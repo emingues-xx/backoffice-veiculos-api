@@ -89,6 +89,17 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint
+app.get('/debug', (req, res) => {
+  res.json({
+    success: true,
+    jwtExpiresIn: config.jwtExpiresIn,
+    jwtSecret: config.jwtSecret ? 'SET' : 'NOT SET',
+    nodeEnv: config.nodeEnv,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // API routes
 app.use(`${config.apiPrefix}/vehicles`, vehicleRoutes);
 app.use(`${config.apiPrefix}/users`, userRoutes);

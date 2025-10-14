@@ -15,9 +15,15 @@ export interface AuthRequest extends Request {
 
 export const authenticate = async (req: AuthRequest, res: Response<ApiResponse>, next: NextFunction): Promise<void> => {
   try {
+    console.log('=== AUTH DEBUG ===');
+    console.log('Headers:', req.headers);
+    console.log('Authorization header:', req.header('Authorization'));
+    
     const token = req.header('Authorization')?.replace('Bearer ', '');
+    console.log('Token extracted:', token ? token.substring(0, 50) + '...' : 'null');
     
     if (!token) {
+      console.log('No token provided');
       res.status(401).json({
         success: false,
         error: 'Access denied. No token provided.',
