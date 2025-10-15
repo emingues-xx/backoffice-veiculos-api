@@ -20,6 +20,7 @@ import userRoutes from '@/routes/userRoutes';
 import salesRoutes from '@/routes/salesRoutes';
 import metricsRoutes from '@/routes/metrics.routes';
 import healthRoutes from '@/routes/health.routes';
+import monitoringRoutes from '@/routes/monitoring.routes';
 
 const app = express();
 
@@ -129,6 +130,7 @@ app.use(`${config.apiPrefix}/vehicles`, vehicleRoutes);
 app.use(`${config.apiPrefix}/users`, userRoutes);
 app.use(`${config.apiPrefix}/sales`, salesRoutes);
 app.use(`${config.apiPrefix}/metrics`, metricsRoutes);
+app.use(`${config.apiPrefix}/monitoring`, monitoringRoutes);
 
 // Metrics endpoint for Prometheus
 app.get('/metrics', (req, res) => {

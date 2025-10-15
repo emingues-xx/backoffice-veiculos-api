@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { config } from '@/config/config';
 import { ApiResponse } from '@/types/api.types';
-import { logger, alertCriticalError } from '@/utils/logger';
+import { logger, logError } from '@/utils/logger';
 
 export interface AppError extends Error {
   statusCode?: number;
@@ -72,7 +72,7 @@ export const errorHandler = (
   if (statusCode >= 500) {
     // Erros de servidor são críticos
     if (error.isOperational === false || statusCode === 500) {
-      alertCriticalError(message, error, errorContext);
+      logError(error, errorContext);
     } else {
       logger.error(message, error, errorContext);
     }
