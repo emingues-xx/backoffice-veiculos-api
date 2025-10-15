@@ -25,10 +25,36 @@ export const config = {
   
   // CORS
   corsOrigin: process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '*',
-  
+
+  // Redis
+  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
-  
+
+  // Jobs
+  jobSchedule: {
+    dailyMetrics: process.env.DAILY_METRICS_CRON || '0 2 * * *', // 2h da manhã
+    healthCheck: process.env.HEALTH_CHECK_CRON || '*/5 * * * *', // A cada 5 minutos
+  },
+
+  // Health Check
+  healthCheck: {
+    timeout: parseInt(process.env.HEALTH_CHECK_TIMEOUT || '5000', 10), // 5 segundos
+    retries: parseInt(process.env.HEALTH_CHECK_RETRIES || '3', 10),
+    alertThreshold: parseInt(process.env.HEALTH_CHECK_ALERT_THRESHOLD || '3', 10), // Falhas consecutivas para alertar
+  },
+
+  // Legacy Systems (para integração)
+  legacySystems: {
+    salesApiUrl: process.env.LEGACY_SALES_API_URL || 'http://localhost:8080/api/sales',
+    inventoryApiUrl: process.env.LEGACY_INVENTORY_API_URL || 'http://localhost:8081/api/inventory',
+    timeout: parseInt(process.env.LEGACY_API_TIMEOUT || '10000', 10), // 10 segundos
+  },
+
+  // Cache fallback
+  cacheFallbackTTL: parseInt(process.env.CACHE_FALLBACK_TTL || '86400', 10), // 24 horas
+
   // Validation
   isDevelopment: process.env.NODE_ENV === 'development',
   isProduction: process.env.NODE_ENV === 'production',

@@ -1,16 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import { config } from '@/config/config';
 import { ApiResponse } from '@/types/api.types';
+import { logger, alertCriticalError } from '@/utils/logger';
 
 export interface AppError extends Error {
   statusCode?: number;
   isOperational?: boolean;
+  context?: Record<string, any>;
 }
 
-export const createError = (message: string, statusCode: number = 500): AppError => {
+export const createError = (
+  message: string,
+  statusCode: number = 500,
+  context?: Record<string, any>
+): AppError => {
   const error: AppError = new Error(message);
   error.statusCode = statusCode;
   error.isOperational = true;
+  error.context = context;
   return error;
 };
 
@@ -22,6 +29,14 @@ export const errorHandler = (
 ): void => {
   let statusCode = error.statusCode || 500;
   let message = error.message || 'Internal Server Error';
+
+  const errorContext = {
+    path: req.path,
+    method: req.method,
+    ip: req.ip,
+    userId: (req as any).user?.id,
+    ...error.context,
+  };
 
   // Mongoose validation error
   if (error.name === 'ValidationError') {
@@ -53,15 +68,26 @@ export const errorHandler = (
     message = 'Token expired';
   }
 
+  // Log estruturado baseado na severidade
+  if (statusCode >= 500) {
+    // Erros de servidor são críticos
+    if (error.isOperational === false || statusCode === 500) {
+      alertCriticalError(message, error, errorContext);
+    } else {
+      logger.error(message, error, errorContext);
+    }
+  } else if (statusCode >= 400) {
+    // Erros de cliente são warnings
+    logger.warn(`Client error: ${message}`, errorContext);
+  } else {
+    logger.info(`Request error: ${message}`, errorContext);
+  }
+
   const response: ApiResponse = {
     success: false,
     error: message,
     message: config.isDevelopment ? error.stack : 'Something went wrong'
   };
-
-  if (config.isDevelopment) {
-    console.error('Error:', error);
-  }
 
   res.status(statusCode).json(response);
 };
