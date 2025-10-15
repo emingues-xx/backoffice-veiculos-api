@@ -57,7 +57,7 @@ export class DataValidationMiddleware {
             requestId: (req as any).requestId
           });
 
-          return res.status(400).json({
+          res.status(400).json({
             success: false,
             error: 'Dados de venda inválidos',
             message: validationResult.errors.join(', '),
@@ -124,7 +124,7 @@ export class DataValidationMiddleware {
             requestId: (req as any).requestId
           });
 
-          return res.status(400).json({
+          res.status(400).json({
             success: false,
             error: 'Dados de veículo inválidos',
             message: validationResult.errors.join(', '),
@@ -191,7 +191,7 @@ export class DataValidationMiddleware {
             requestId: (req as any).requestId
           });
 
-          return res.status(400).json({
+          res.status(400).json({
             success: false,
             error: 'Dados de usuário inválidos',
             message: validationResult.errors.join(', '),
@@ -253,7 +253,7 @@ export class DataValidationMiddleware {
             requestId: (req as any).requestId
           });
 
-          return res.status(400).json({
+          res.status(400).json({
             success: false,
             error: 'Dados inválidos',
             message: validationResult.errors.join(', '),
@@ -315,7 +315,7 @@ export class DataValidationMiddleware {
             requestId: (req as any).requestId
           });
 
-          return res.status(500).json({
+          res.status(500).json({
             success: false,
             error: 'Problemas de integridade detectados',
             message: validationResult.errors.join(', '),

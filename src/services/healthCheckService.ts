@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { config } from '@/config/config';
-import { logger, alertCriticalError } from '@/utils/logger';
+import { logger, logError } from '@/utils/logger';
 import { redisClient } from '@/config/redis';
 
 export interface HealthCheckResult {
@@ -94,7 +94,7 @@ class HealthCheckService {
 
     // Alerta em caso de falhas críticas
     if (overallStatus === 'unhealthy') {
-      alertCriticalError('System health check failed', new Error('Multiple services down'), {
+      logError(new Error('Multiple services down'), {
         services,
       });
     }
@@ -125,7 +125,9 @@ class HealthCheckService {
       }
 
       // Ping simples ao banco
-      await mongoose.connection.db.admin().ping();
+      if (mongoose.connection.db) {
+        await mongoose.connection.db.admin().ping();
+      }
 
       const responseTime = Date.now() - startTime;
 
@@ -254,9 +256,8 @@ class HealthCheckService {
   private checkAlertThreshold(serviceName: string): void {
     const tracker = this.failureTracker[serviceName];
     if (tracker && tracker.count >= config.healthCheck.alertThreshold) {
-      alertCriticalError(
-        `Service ${serviceName} has failed ${tracker.count} consecutive times`,
-        new Error('Service health threshold exceeded'),
+      logError(
+        new Error(`Service ${serviceName} has failed ${tracker.count} consecutive times`),
         {
           serviceName,
           consecutiveFailures: tracker.count,
@@ -271,10 +272,10 @@ class HealthCheckService {
    */
   private async cacheHealthCheck(result: HealthCheckResult): Promise<void> {
     try {
-      await redisClient.setEx(
+      await redisClient.set(
         'system:health:last_valid',
-        config.cacheFallbackTTL,
-        JSON.stringify(result)
+        JSON.stringify(result),
+        config.cacheFallbackTTL
       );
     } catch (error) {
       logger.warn('Failed to cache health check result', { error });

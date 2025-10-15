@@ -65,13 +65,13 @@ export class JobMonitoringService {
     try {
       const rawStats = await JobMonitoringUtils.getJobStatistics(jobName, days);
       
-      const statistics: JobStatistics[] = rawStats.map(stat => {
-        const totalExecutions = stat.statuses.reduce((sum, s) => sum + s.count, 0);
-        const completedCount = stat.statuses.find(s => s.status === 'completed')?.count || 0;
+      const statistics: JobStatistics[] = rawStats.map((stat: any) => {
+        const totalExecutions = stat.statuses.reduce((sum: number, s: any) => sum + s.count, 0);
+        const completedCount = stat.statuses.find((s: any) => s.status === 'completed')?.count || 0;
         const successRate = totalExecutions > 0 ? (completedCount / totalExecutions) * 100 : 0;
         
         const statusesMap: { [key: string]: any } = {};
-        stat.statuses.forEach(s => {
+        stat.statuses.forEach((s: any) => {
           statusesMap[s.status] = {
             count: s.count,
             avgDuration: s.avgDuration,
@@ -85,7 +85,7 @@ export class JobMonitoringService {
           totalExecutions,
           successRate: Math.round(successRate * 100) / 100,
           averageDuration: Math.round(
-            stat.statuses.reduce((sum, s) => sum + (s.avgDuration || 0), 0) / stat.statuses.length
+            stat.statuses.reduce((sum: number, s: any) => sum + (s.avgDuration || 0), 0) / stat.statuses.length
           ),
           statuses: statusesMap
         };
@@ -118,7 +118,7 @@ export class JobMonitoringService {
         .limit(limit)
         .select('-error.stack -metadata -result'); // Exclui campos pesados
 
-      return executions.map(exec => ({
+      return executions.map((exec: any) => ({
         _id: exec._id.toString(),
         jobName: exec.jobName,
         jobType: exec.jobType,
@@ -126,7 +126,7 @@ export class JobMonitoringService {
         startTime: exec.startTime,
         endTime: exec.endTime,
         duration: exec.duration,
-        progress: exec.progress,
+        progress: exec.progress || 0,
         error: exec.error ? {
           message: exec.error.message,
           code: exec.error.code
@@ -147,7 +147,7 @@ export class JobMonitoringService {
     try {
       const runningJobs = await JobMonitoringUtils.getRunningJobs();
       
-      return runningJobs.map(job => ({
+      return runningJobs.map((job: any) => ({
         _id: job._id.toString(),
         jobName: job.jobName,
         jobType: job.jobType,
@@ -235,8 +235,8 @@ export class JobMonitoringService {
           $group: {
             _id: null,
             avgDuration: { $avg: '$duration' },
-            p95Duration: { $percentile: { input: '$duration', p: [0.95] } },
-            p99Duration: { $percentile: { input: '$duration', p: [0.99] } },
+            maxDuration: { $max: '$duration' },
+            minDuration: { $min: '$duration' },
             totalJobs: { $sum: 1 },
             failedJobs: {
               $sum: {
@@ -263,8 +263,8 @@ export class JobMonitoringService {
 
       return {
         averageResponseTime: Math.round(metric.avgDuration || 0),
-        p95ResponseTime: Math.round(metric.p95Duration?.[0] || 0),
-        p99ResponseTime: Math.round(metric.p99Duration?.[0] || 0),
+        p95ResponseTime: Math.round(metric.maxDuration || 0), // Usando max como aproximação do p95
+        p99ResponseTime: Math.round(metric.maxDuration || 0), // Usando max como aproximação do p99
         errorRate: Math.round(errorRate * 100) / 100,
         throughput: Math.round((metric.totalJobs / totalHours) * 100) / 100
       };

@@ -58,7 +58,7 @@ export class JobMonitoringUtils {
     // Configura heartbeat
     const heartbeatInterval = setInterval(async () => {
       try {
-        execution.updateHeartbeat();
+        await JobExecution.findByIdAndUpdate(execution._id, { lastHeartbeat: new Date() });
       } catch (error) {
         logger.error('Failed to update heartbeat', { 
           executionId: execution._id,
@@ -76,23 +76,38 @@ export class JobMonitoringUtils {
       const context: JobExecutionContext = {
         execution,
         updateProgress: async (progress: number) => {
-          execution.updateProgress(progress);
+          await JobExecution.findByIdAndUpdate(execution._id, { progress });
           await execution.save();
         },
         updateHeartbeat: async () => {
-          execution.updateHeartbeat();
+          await JobExecution.findByIdAndUpdate(execution._id, { lastHeartbeat: new Date() });
           await execution.save();
         },
         complete: async (result?: any) => {
-          execution.complete(result);
+          await JobExecution.findByIdAndUpdate(execution._id, { 
+            status: 'completed', 
+            endTime: new Date(), 
+            result,
+            duration: Date.now() - execution.startTime.getTime()
+          });
           await execution.save();
         },
         fail: async (error: Error | string) => {
-          execution.fail(error);
+          await JobExecution.findByIdAndUpdate(execution._id, { 
+            status: 'failed', 
+            endTime: new Date(), 
+            error: { message: error instanceof Error ? error.message : String(error), code: 'JOB_FAILED' },
+            duration: Date.now() - execution.startTime.getTime()
+          });
           await execution.save();
         },
         timeout: async () => {
-          execution.timeout();
+          await JobExecution.findByIdAndUpdate(execution._id, { 
+            status: 'timeout', 
+            endTime: new Date(), 
+            error: { message: 'Job timeout', code: 'JOB_TIMEOUT' },
+            duration: Date.now() - execution.startTime.getTime()
+          });
           await execution.save();
         }
       };
@@ -101,7 +116,12 @@ export class JobMonitoringUtils {
       const result = await jobFunction(context);
 
       // Job completado com sucesso
-      execution.complete(result);
+      await JobExecution.findByIdAndUpdate(execution._id, { 
+        status: 'completed', 
+        endTime: new Date(), 
+        result,
+        duration: Date.now() - execution.startTime.getTime()
+      });
       await execution.save();
 
       // Limpa recursos
@@ -118,7 +138,12 @@ export class JobMonitoringUtils {
 
     } catch (error) {
       // Job falhou
-      execution.fail(error instanceof Error ? error : new Error(String(error)));
+      await JobExecution.findByIdAndUpdate(execution._id, { 
+        status: 'failed', 
+        endTime: new Date(), 
+        error: { message: error instanceof Error ? error.message : String(error), code: 'JOB_FAILED' },
+        duration: Date.now() - execution.startTime.getTime()
+      });
       await execution.save();
 
       // Limpa recursos
@@ -155,7 +180,12 @@ export class JobMonitoringUtils {
    */
   private static async handleJobTimeout(execution: IJobExecution): Promise<void> {
     try {
-      execution.timeout();
+      await JobExecution.findByIdAndUpdate(execution._id, { 
+        status: 'timeout', 
+        endTime: new Date(), 
+        error: { message: 'Job timeout', code: 'JOB_TIMEOUT' },
+        duration: Date.now() - execution.startTime.getTime()
+      });
       await execution.save();
 
       logger.error('Job execution timeout', {
@@ -190,13 +220,25 @@ export class JobMonitoringUtils {
    */
   static async checkStuckJobs(timeoutMinutes: number = 30): Promise<void> {
     try {
-      const stuckJobs = await JobExecution.findStuckJobs(timeoutMinutes);
+      const timeoutDate = new Date(Date.now() - timeoutMinutes * 60 * 1000);
+      const stuckJobs = await JobExecution.find({
+        status: 'running',
+        $or: [
+          { lastHeartbeat: { $lt: timeoutDate } },
+          { lastHeartbeat: { $exists: false } }
+        ]
+      });
       
       if (stuckJobs.length > 0) {
         logger.warn('Found stuck jobs', { count: stuckJobs.length });
 
         for (const job of stuckJobs) {
-          job.timeout();
+          await JobExecution.findByIdAndUpdate(job._id, { 
+            status: 'timeout', 
+            endTime: new Date(), 
+            error: { message: 'Job timeout', code: 'JOB_TIMEOUT' },
+            duration: Date.now() - job.startTime.getTime()
+          });
           await job.save();
 
           // Envia alerta para cada job travado
@@ -227,7 +269,60 @@ export class JobMonitoringUtils {
    */
   static async getJobStatistics(jobName?: string, days: number = 30) {
     try {
-      const stats = await JobExecution.getJobStatistics(jobName, days);
+      const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const matchQuery: any = { startTime: { $gte: startDate } };
+      
+      if (jobName) {
+        matchQuery.jobName = jobName;
+      }
+
+      const stats = await JobExecution.aggregate([
+        { $match: matchQuery },
+        {
+          $group: {
+            _id: '$jobName',
+            statuses: {
+              $push: {
+                status: '$status',
+                count: 1,
+                avgDuration: '$duration',
+                maxDuration: '$duration',
+                minDuration: '$duration'
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 1,
+            statuses: {
+              $reduce: {
+                input: '$statuses',
+                initialValue: [],
+                in: {
+                  $concatArrays: [
+                    '$$value',
+                    [{
+                      $cond: [
+                        { $in: ['$$this.status', '$$value.status'] },
+                        [],
+                        [{
+                          status: '$$this.status',
+                          count: { $sum: '$$this.count' },
+                          avgDuration: { $avg: '$$this.avgDuration' },
+                          maxDuration: { $max: '$$this.maxDuration' },
+                          minDuration: { $min: '$$this.minDuration' }
+                        }]
+                      ]
+                    }]
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]);
+
       return stats;
     } catch (error) {
       logger.error('Failed to get job statistics', {
@@ -242,7 +337,16 @@ export class JobMonitoringUtils {
    */
   static async getExecutionHistory(jobName?: string, limit: number = 50) {
     try {
-      const history = await JobExecution.getRecentExecutions(jobName, limit);
+      const query: any = {};
+      if (jobName) {
+        query.jobName = jobName;
+      }
+
+      const history = await JobExecution.find(query)
+        .sort({ startTime: -1 })
+        .limit(limit)
+        .select('-error.stack -metadata -result');
+      
       return history;
     } catch (error) {
       logger.error('Failed to get execution history', {
@@ -257,7 +361,9 @@ export class JobMonitoringUtils {
    */
   static async getRunningJobs() {
     try {
-      const runningJobs = await JobExecution.findRunningJobs();
+      const runningJobs = await JobExecution.find({ status: 'running' })
+        .sort({ startTime: -1 });
+      
       return runningJobs;
     } catch (error) {
       logger.error('Failed to get running jobs', {

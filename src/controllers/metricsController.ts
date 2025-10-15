@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '@/middleware/auth';
 import { ApiResponse } from '@/types/api.types';
 import SalesMetricsService from '@/services/SalesMetricsService';
@@ -8,6 +8,11 @@ import { MetricsQuery } from '@/types/metrics.types';
  * Controller para endpoints de métricas de vendas
  */
 class MetricsController {
+  private salesMetricsService: any;
+
+  constructor() {
+    this.salesMetricsService = SalesMetricsService;
+  }
   /**
    * GET /api/metrics/total-sales
    * Retorna total de vendas no período
@@ -254,6 +259,78 @@ class MetricsController {
           }
         },
         message: 'Metrics summary retrieved successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Retorna receita total no período
+   */
+  async getTotalRevenue(req: AuthRequest, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const query = req.query as any;
+      const metrics = await this.salesMetricsService.getTotalRevenue(query);
+      
+      res.json({
+        success: true,
+        data: {
+          totalRevenue: metrics.totalRevenue,
+          period: {
+            startDate: query.startDate,
+            endDate: query.endDate
+          }
+        },
+        message: 'Total revenue retrieved successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Retorna vendas por dia no período
+   */
+  async getSalesByDay(req: AuthRequest, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const query = req.query as any;
+      const metrics = await this.salesMetricsService.getSalesByDay(query);
+      
+      res.json({
+        success: true,
+        data: {
+          salesByDay: metrics.salesByDay,
+          period: {
+            startDate: query.startDate,
+            endDate: query.endDate
+          }
+        },
+        message: 'Sales by day retrieved successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Retorna top vendedores no período
+   */
+  async getTopSellers(req: AuthRequest, res: Response<ApiResponse>, next: NextFunction): Promise<void> {
+    try {
+      const query = req.query as any;
+      const metrics = await this.salesMetricsService.getTopSellers(query);
+      
+      res.json({
+        success: true,
+        data: {
+          topSellers: metrics.topSellers,
+          period: {
+            startDate: query.startDate,
+            endDate: query.endDate
+          }
+        },
+        message: 'Top sellers retrieved successfully'
       });
     } catch (error) {
       next(error);

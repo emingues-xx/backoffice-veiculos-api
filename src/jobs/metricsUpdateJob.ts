@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { config } from '@/config/config';
-import { logger, alertCriticalError } from '@/utils/logger';
+import { logger, logError } from '@/utils/logger';
 import SalesMetricsService from '@/services/SalesMetricsService';
 import healthCheckService from '@/services/healthCheckService';
 
@@ -91,7 +91,7 @@ class MetricsUpdateJob {
         date: yesterday.toISOString().split('T')[0],
       });
     } catch (error) {
-      alertCriticalError('Daily metrics update job failed', error, {
+      logError(error instanceof Error ? error : new Error(String(error)), {
         jobName: 'dailyMetricsUpdate',
       });
       throw error;
