@@ -14,6 +14,7 @@ import { errorHandler, notFound } from '@/middleware/errorHandler';
 import vehicleRoutes from '@/routes/vehicleRoutes';
 import userRoutes from '@/routes/userRoutes';
 import salesRoutes from '@/routes/salesRoutes';
+import metricsRoutes from '@/routes/metrics.routes';
 
 const app = express();
 
@@ -104,6 +105,7 @@ app.get('/debug', (req, res) => {
 app.use(`${config.apiPrefix}/vehicles`, vehicleRoutes);
 app.use(`${config.apiPrefix}/users`, userRoutes);
 app.use(`${config.apiPrefix}/sales`, salesRoutes);
+app.use(`${config.apiPrefix}/metrics`, metricsRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {

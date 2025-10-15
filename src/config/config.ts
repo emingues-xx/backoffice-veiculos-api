@@ -25,7 +25,10 @@ export const config = {
   
   // CORS
   corsOrigin: process.env.CORS_ORIGIN || process.env.FRONTEND_URL || '*',
-  
+
+  // Redis
+  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+
   // Logging
   logLevel: process.env.LOG_LEVEL || 'info',
   
