@@ -9,10 +9,15 @@ const startServer = async (): Promise<void> => {
     await connectDatabase();
 
     // Connect to Redis (optional - won't block server start)
-    try {
-      await redisClient.connect();
-    } catch (error) {
-      console.warn('⚠️  Redis connection failed, running without cache:', error);
+    if (process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '') {
+      try {
+        await redisClient.connect();
+        console.log('✅ Connected to Redis successfully');
+      } catch (error) {
+        console.warn('⚠️  Redis connection failed, running without cache:', error);
+      }
+    } else {
+      console.log('ℹ️  Redis disabled, running without cache');
     }
 
     // Start server

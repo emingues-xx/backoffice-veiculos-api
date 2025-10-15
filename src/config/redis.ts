@@ -88,6 +88,13 @@ class RedisClient {
     await this.client.flushDb();
   }
 
+  async ping(): Promise<string> {
+    if (!this.client?.isOpen) {
+      throw new Error('Redis not connected');
+    }
+    return await this.client.ping();
+  }
+
   isConnected(): boolean {
     return this.connected && this.client?.isOpen === true;
   }

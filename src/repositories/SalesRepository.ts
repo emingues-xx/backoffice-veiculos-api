@@ -265,7 +265,7 @@ export class SalesRepository {
     ];
 
     if (filters.sellerId) {
-      (pipeline[0].$match as any)['seller.id'] = filters.sellerId;
+      (pipeline[0] as any).$match['seller.id'] = filters.sellerId;
     }
 
     const result = await SaleModel.aggregate(pipeline).exec();

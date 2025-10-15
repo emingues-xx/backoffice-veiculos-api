@@ -43,7 +43,7 @@ router.use(authenticate);
  */
 router.get(
   '/total-sales',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:total-sales' }),
   metricsController.getTotalSales
 );
@@ -79,7 +79,7 @@ router.get(
  */
 router.get(
   '/daily-sales',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:daily-sales' }),
   metricsController.getDailySales
 );
@@ -115,7 +115,7 @@ router.get(
  */
 router.get(
   '/average-ticket',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:average-ticket' }),
   metricsController.getAverageTicket
 );
@@ -151,7 +151,7 @@ router.get(
  */
 router.get(
   '/conversion-rate',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:conversion-rate' }),
   metricsController.getConversionRate
 );
@@ -187,7 +187,7 @@ router.get(
  */
 router.get(
   '/average-time',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:average-time' }),
   metricsController.getAverageTime
 );
@@ -223,9 +223,112 @@ router.get(
  */
 router.get(
   '/summary',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:summary' }),
   metricsController.getMetricsSummary
+);
+
+/**
+ * @swagger
+ * /api/metrics/revenue:
+ *   get:
+ *     summary: Retorna receita total no período
+ *     tags: [Metrics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: sellerId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Receita total
+ */
+router.get(
+  '/revenue',
+  validate(metricsQuerySchema),
+  cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:revenue' }),
+  (req, res, next) => metricsController.getTotalRevenue(req as any, res, next)
+);
+
+/**
+ * @swagger
+ * /api/metrics/sales-by-day:
+ *   get:
+ *     summary: Retorna vendas por dia no período
+ *     tags: [Metrics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: sellerId
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Vendas por dia
+ */
+router.get(
+  '/sales-by-day',
+  validate(metricsQuerySchema),
+  cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:sales-by-day' }),
+  (req, res, next) => metricsController.getSalesByDay(req as any, res, next)
+);
+
+/**
+ * @swagger
+ * /api/metrics/top-sellers:
+ *   get:
+ *     summary: Retorna top vendedores no período
+ *     tags: [Metrics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *     responses:
+ *       200:
+ *         description: Top vendedores
+ */
+router.get(
+  '/top-sellers',
+  validate(metricsQuerySchema),
+  cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:top-sellers' }),
+  (req, res, next) => metricsController.getTopSellers(req as any, res, next)
 );
 
 export default router;

@@ -3,9 +3,34 @@ import Joi from 'joi';
 // Schema para query de métricas
 export const metricsQuerySchema = Joi.object({
   period: Joi.string().valid('daily', 'weekly', 'monthly', 'yearly').optional(),
-  startDate: Joi.date().required(),
-  endDate: Joi.date().required().greater(Joi.ref('startDate')),
+  startDate: Joi.date().optional(),
+  endDate: Joi.date().optional(),
   sellerId: Joi.string().pattern(/^[0-9a-fA-F]{24}$/).optional()
+}).custom((value, helpers) => {
+  // Se startDate e endDate não foram fornecidos, usar valores padrão (últimos 30 dias)
+  if (!value.startDate && !value.endDate) {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    
+    return {
+      ...value,
+      startDate,
+      endDate
+    };
+  }
+  
+  // Se apenas um dos dois foi fornecido, retornar erro
+  if ((value.startDate && !value.endDate) || (!value.startDate && value.endDate)) {
+    return helpers.error('any.invalid', { message: 'startDate e endDate devem ser fornecidos juntos' });
+  }
+  
+  // Se ambos foram fornecidos, validar que endDate > startDate
+  if (value.startDate && value.endDate && value.endDate <= value.startDate) {
+    return helpers.error('any.invalid', { message: 'endDate deve ser maior que startDate' });
+  }
+  
+  return value;
 });
 
 // Schema para criação de métricas consolidadas

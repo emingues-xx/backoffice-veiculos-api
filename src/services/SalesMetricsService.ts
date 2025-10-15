@@ -149,7 +149,7 @@ export class SalesMetricsService {
       { upsert: true, new: true, runValidators: true }
     ).lean().exec();
 
-    return metrics as SalesMetrics;
+    return metrics as unknown as SalesMetrics;
   }
 
   /**
@@ -165,10 +165,10 @@ export class SalesMetricsService {
       filter.period = query.period;
     }
 
-    return SalesMetricsModel.findOne(filter)
+    return (SalesMetricsModel.findOne(filter)
       .sort({ createdAt: -1 })
       .lean()
-      .exec();
+      .exec()) as unknown as Promise<SalesMetrics | null>;
   }
 
   /**
@@ -197,7 +197,7 @@ export class SalesMetricsService {
     ]);
 
     return {
-      metrics: metrics as SalesMetrics[],
+      metrics: metrics as unknown as SalesMetrics[],
       total,
       page,
       totalPages: Math.ceil(total / limit)
@@ -326,6 +326,84 @@ export class SalesMetricsService {
         salesGrowth,
         revenueGrowth
       }
+    };
+  }
+
+  /**
+   * Retorna receita total no período
+   */
+  async getTotalRevenue(filters: SalesFilter): Promise<{ totalRevenue: number }> {
+    console.log('getTotalRevenue - filters:', filters);
+    const sales = await this.repository.findByFilters(filters);
+    console.log('getTotalRevenue - sales found:', sales.length);
+    const totalRevenue = sales.reduce((sum: number, sale: any) => sum + sale.salePrice, 0);
+    return {
+      totalRevenue
+    };
+  }
+
+  /**
+   * Retorna vendas por dia no período
+   */
+  async getSalesByDay(filters: SalesFilter): Promise<{ salesByDay: any[] }> {
+    const sales = await this.repository.findByFilters(filters);
+    
+    // Agrupa vendas por dia
+    const salesByDay = sales.reduce((acc: any, sale: any) => {
+      const date = sale.saleDate.toISOString().split('T')[0];
+      const existing = acc.find((item: any) => item.date === date);
+      
+      if (existing) {
+        existing.count += 1;
+        existing.revenue += sale.salePrice;
+      } else {
+        acc.push({
+          date,
+          count: 1,
+          revenue: sale.salePrice
+        });
+      }
+      
+      return acc;
+    }, []);
+
+    return {
+      salesByDay: salesByDay.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    };
+  }
+
+  /**
+   * Retorna top vendedores no período
+   */
+  async getTopSellers(filters: SalesFilter): Promise<{ topSellers: any[] }> {
+    const sales = await this.repository.findByFilters(filters);
+    
+    // Agrupa vendas por vendedor
+    const sellerStats = sales.reduce((acc: any, sale: any) => {
+      const sellerId = sale.seller.id;
+      const existing = acc.find((item: any) => item.sellerId === sellerId);
+      
+      if (existing) {
+        existing.salesCount += 1;
+        existing.revenue += sale.salePrice;
+        existing.commission += sale.commission || 0;
+      } else {
+        acc.push({
+          sellerId,
+          sellerName: sale.seller.name,
+          salesCount: 1,
+          revenue: sale.salePrice,
+          commission: sale.commission || 0
+        });
+      }
+      
+      return acc;
+    }, []);
+
+    return {
+      topSellers: sellerStats
+        .sort((a: any, b: any) => b.revenue - a.revenue)
+        .slice(0, 10)
     };
   }
 }
