@@ -9,12 +9,17 @@ import swaggerUi from 'swagger-ui-express';
 import { config } from '@/config/config';
 import { swaggerSpec } from '@/config/swagger';
 import { errorHandler, notFound } from '@/middleware/errorHandler';
+import { LoggingMiddleware } from '@/middleware/logger.middleware';
+import { MetricsMiddleware } from '@/middleware/metrics.middleware';
+import { HealthCheckMiddleware } from '@/middleware/healthCheck.middleware';
+import { logger } from '@/utils/logger';
 
 // Import routes
 import vehicleRoutes from '@/routes/vehicleRoutes';
 import userRoutes from '@/routes/userRoutes';
 import salesRoutes from '@/routes/salesRoutes';
 import metricsRoutes from '@/routes/metrics.routes';
+import healthRoutes from '@/routes/health.routes';
 
 const app = express();
 
@@ -70,6 +75,31 @@ if (config.isDevelopment) {
   app.use(morgan('combined'));
 }
 
+// Structured logging middleware
+app.use(LoggingMiddleware.create({
+  logRequests: true,
+  logResponses: true,
+  logErrors: true,
+  logPerformance: true
+}));
+
+// Metrics middleware
+app.use(MetricsMiddleware.create({
+  enabled: true,
+  alertThresholds: {
+    responseTime: 2000,
+    errorRate: 5.0
+  },
+  collectUserMetrics: true
+}));
+
+// Health check middleware
+app.use(HealthCheckMiddleware.create({
+  enabled: true,
+  timeout: 5000,
+  alertOnFailure: true
+}));
+
 // API Documentation
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
@@ -80,15 +110,8 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   }
 }));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'API is running',
-    timestamp: new Date().toISOString(),
-    environment: config.nodeEnv
-  });
-});
+// Health check routes
+app.use('/health', healthRoutes);
 
 // Debug endpoint
 app.get('/debug', (req, res) => {
@@ -106,6 +129,14 @@ app.use(`${config.apiPrefix}/vehicles`, vehicleRoutes);
 app.use(`${config.apiPrefix}/users`, userRoutes);
 app.use(`${config.apiPrefix}/sales`, salesRoutes);
 app.use(`${config.apiPrefix}/metrics`, metricsRoutes);
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', (req, res) => {
+  const { MetricsCollector } = require('@/utils/metrics');
+  const metrics = MetricsCollector.generatePrometheusMetrics();
+  res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
+  res.send(metrics);
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
