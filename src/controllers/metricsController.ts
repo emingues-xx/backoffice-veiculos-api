@@ -42,7 +42,7 @@ class MetricsController {
             startDate: query.startDate,
             endDate: query.endDate
           },
-          growth: metrics.periodComparison.salesGrowth
+          growth: metrics.periodComparison?.salesGrowth || 0
         },
         message: 'Total sales retrieved successfully'
       });

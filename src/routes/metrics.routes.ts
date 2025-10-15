@@ -43,7 +43,7 @@ router.use(authenticate);
  */
 router.get(
   '/total-sales',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:total-sales' }),
   metricsController.getTotalSales
 );
@@ -79,7 +79,7 @@ router.get(
  */
 router.get(
   '/daily-sales',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:daily-sales' }),
   metricsController.getDailySales
 );
@@ -115,7 +115,7 @@ router.get(
  */
 router.get(
   '/average-ticket',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:average-ticket' }),
   metricsController.getAverageTicket
 );
@@ -151,7 +151,7 @@ router.get(
  */
 router.get(
   '/conversion-rate',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:conversion-rate' }),
   metricsController.getConversionRate
 );
@@ -187,7 +187,7 @@ router.get(
  */
 router.get(
   '/average-time',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:average-time' }),
   metricsController.getAverageTime
 );
@@ -223,7 +223,7 @@ router.get(
  */
 router.get(
   '/summary',
-  validate(metricsQuerySchema, 'query'),
+  validate(metricsQuerySchema),
   cacheMiddleware({ ttl: 300, keyPrefix: 'metrics:summary' }),
   metricsController.getMetricsSummary
 );

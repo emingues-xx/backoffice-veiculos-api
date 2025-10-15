@@ -40,7 +40,9 @@ export class HealthCheckUtils {
     try {
       if (mongoose.connection.readyState === 1) {
         // Testa a conexão com um ping
-        await mongoose.connection.db.admin().ping();
+        if (mongoose.connection.db) {
+          await mongoose.connection.db.admin().ping();
+        }
         const responseTime = Date.now() - startTime;
         
         return {

@@ -149,7 +149,7 @@ export class SalesMetricsService {
       { upsert: true, new: true, runValidators: true }
     ).lean().exec();
 
-    return metrics as SalesMetrics;
+    return metrics as unknown as SalesMetrics;
   }
 
   /**
@@ -165,7 +165,7 @@ export class SalesMetricsService {
       filter.period = query.period;
     }
 
-    return SalesMetricsModel.findOne(filter)
+    return SalesMetricsModel.findOne(filter) as unknown as Promise<SalesMetrics | null>
       .sort({ createdAt: -1 })
       .lean()
       .exec();
@@ -197,7 +197,7 @@ export class SalesMetricsService {
     ]);
 
     return {
-      metrics: metrics as SalesMetrics[],
+      metrics: metrics as unknown as SalesMetrics[],
       total,
       page,
       totalPages: Math.ceil(total / limit)
